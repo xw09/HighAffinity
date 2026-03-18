@@ -1,0 +1,53 @@
+# raw_config.yaml
+
+data:
+  datasets:
+    - target_dir: /path/to/data/target_dir
+      msa_dir: /path/to/data/msa_dir
+      mol_dir: /path/to/data/mol_dir
+      num_workers: 4
+  filters: []  # 根据需要提供过滤器配置，若没有可以保持空列表
+  featurizer: Boltz2Featurizer  # Featurizer类的路径
+  tokenizer: Boltz2Tokenizer  # Tokenizer类的路径
+  max_atoms: 2048  # 根据需要设置最大原子数
+  max_tokens: 256  # 根据需要设置最大token数
+  max_seqs: 1024  # 根据需要设置最大序列数
+  samples_per_epoch: 1000  # 根据需要设置每个epoch的样本数量
+  batch_size: 32  # 设置批大小
+  random_seed: 42  # 随机种子
+  pin_memory: true  # 是否使用pin_memory
+  symmetries: /path/to/symmetries  # 根据需要设置对称性
+  atoms_per_window_queries: 10  # 根据需要设置每个窗口查询的原子数
+  min_dist: 0.0  # 最小距离
+  max_dist: 10.0  # 最大距离
+  num_bins: 50  # 设置bin数量
+
+model:
+  params:
+    param1: value1
+    param2: value2
+
+output: /path/to/output/directory
+
+trainer:
+  devices: 1
+  precision: "bf16-mixed"
+  max_epochs: 20
+  accelerator: gpu
+
+wandb:
+  name: "experiment_name"
+  project: "project_name"
+  entity: "entity_name"
+  log_model: False
+
+resume: /path/to/checkpoint.ckpt
+pretrained: /path/to/pretrained_model.ckpt
+disable_checkpoint: False
+matmul_precision: "high"
+find_unused_parameters: False
+save_top_k: 1
+validation_only: False
+debug: True
+strict_loading: False
+load_confidence_from_trunk: False

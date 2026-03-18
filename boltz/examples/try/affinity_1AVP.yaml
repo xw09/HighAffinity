@@ -1,0 +1,11 @@
+version: 1  # Optional, defaults to 1
+sequences:
+  - protein:
+      id:  A
+      sequence: AEYVRALFDFNGNDEEDLPFKKGDILRIRDKPEEQWWNAEDSEGKRGMIPVPYVEKY
+  - protein:    
+      id: B
+      sequence: PPPVPPRRRR
+properties:
+  - affinity:
+      binder: B
