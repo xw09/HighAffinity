@@ -48,6 +48,13 @@ export BOLTZ_CACHE="$HOME/.boltz"
 The public Boltz2 affinity checkpoint must be available as
 `$BOLTZ_CACHE/boltz2_aff.ckpt`.
 
+Selected affinity-head bundles use Git LFS. After cloning, retrieve them with:
+
+```bash
+git lfs install
+git lfs pull --include="revision/checkpoints/affinity_heads/*.pt"
+```
+
 ## Dataset audit and fixed split
 
 ```bash
