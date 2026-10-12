@@ -1,0 +1,43 @@
+{
+  "train_vs_validation": {
+    "id": 0,
+    "Protein_Sequence": 0,
+    "Peptide_Sequence": 904,
+    "PDB_ID": 68,
+    "prot_cluster": 0,
+    "pep_cluster": 850,
+    "exact_protein_peptide_pair": 0,
+    "right_rows_with_peptide_seen_in_left": 1183,
+    "right_rows_with_PDB_seen_in_left": 78
+  },
+  "train_vs_test": {
+    "id": 0,
+    "Protein_Sequence": 0,
+    "Peptide_Sequence": 1374,
+    "PDB_ID": 166,
+    "prot_cluster": 0,
+    "pep_cluster": 1235,
+    "exact_protein_peptide_pair": 0,
+    "right_rows_with_peptide_seen_in_left": 1868,
+    "right_rows_with_PDB_seen_in_left": 183
+  },
+  "validation_vs_test": {
+    "id": 0,
+    "Protein_Sequence": 0,
+    "Peptide_Sequence": 253,
+    "PDB_ID": 6,
+    "prot_cluster": 0,
+    "pep_cluster": 258,
+    "exact_protein_peptide_pair": 0,
+    "right_rows_with_peptide_seen_in_left": 472,
+    "right_rows_with_PDB_seen_in_left": 8
+  },
+  "original_test_invariance": {
+    "original_test_records": 2521,
+    "assigned_clean_test": 2496,
+    "assigned_excluded_test": 25,
+    "assigned_train_or_validation": 0,
+    "original_test_receptor_clusters": 150,
+    "clean_test_receptor_clusters": 150
+  }
+}

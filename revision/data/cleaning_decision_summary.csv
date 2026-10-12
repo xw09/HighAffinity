@@ -1,0 +1,15 @@
+split_original,label_status,label_action,count
+test,ambiguous_lower_censored,exclude_from_classification,25
+test,exact_numeric,unchanged,516
+test,structure_derived,unchanged,1101
+test,synthetic_decoy,unchanged,861
+test,unambiguous_lower_censored,unchanged,18
+trainval,ambiguous_lower_censored,exclude_from_classification,77
+trainval,ambiguous_upper_censored,exclude_from_classification,1
+trainval,unparsed_or_unknown_affinity,exclude_from_classification,1
+trainval,approximate_numeric,relabeled,3
+trainval,exact_numeric,unchanged,4500
+trainval,structure_derived,unchanged,6226
+trainval,synthetic_decoy,unchanged,7559
+trainval,unambiguous_lower_censored,unchanged,60
+trainval,unambiguous_upper_censored,unchanged,2

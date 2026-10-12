@@ -560,8 +560,8 @@ class AffinityInfo:
 
     chain_id: int
     mw: float
-    # true_affinity: Optional[float]#111
-    # true_class: int#1/0
+    true_affinity: Optional[float] = None
+    true_class: Optional[int] = None
 
 
 @dataclass(frozen=True)

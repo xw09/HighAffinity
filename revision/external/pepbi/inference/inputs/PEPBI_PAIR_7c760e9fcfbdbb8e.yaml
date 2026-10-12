@@ -1,0 +1,13 @@
+version: 1
+sequences:
+- protein:
+    id: A
+    sequence: MAGWQSYVDNLMCDGCCQEAAIVGYCDAKYVWAATAGGVFQSITPVEIDMIVGKDREGFFTNGLTLGAKKCSVIRDSLYVDGDCTMDIRTKSQGGEPTYNVAVGRAGRVLVFVMGKEGVHGGGLNKKAYSMAKYLRDSGA
+    msa: empty
+- protein:
+    id: B
+    sequence: GPPPPPGPPPPPGPPPPPGL
+    msa: empty
+properties:
+- affinity:
+    binder: B

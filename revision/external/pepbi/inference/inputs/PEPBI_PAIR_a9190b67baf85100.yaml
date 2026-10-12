@@ -1,0 +1,13 @@
+version: 1
+sequences:
+- protein:
+    id: A
+    sequence: SNASYVALYKFLPLENNDLALQPGDRIMLVDDSNEDWWKGKIGDRVGFFPANFVQRVRPGENVWRCCQPFSGNKEQGYMSLKENQICVGVGRSKDADGFIRVSSGKKRGLVPVDALTEI
+    msa: empty
+- protein:
+    id: B
+    sequence: EDEPEIPLSPRPRP
+    msa: empty
+properties:
+- affinity:
+    binder: B

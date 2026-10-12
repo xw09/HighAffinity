@@ -1,0 +1,12 @@
+{
+  "source": "revision/external/pepbi/processed/pepbi_external_pair_disjoint_model_input.csv",
+  "observations": 177,
+  "unique_sequence_pairs": 137,
+  "unique_receptors": 55,
+  "unique_peptides": 82,
+  "binding_groups": 31,
+  "inputs_dir": "revision/external/pepbi/inference/inputs",
+  "mapping": "revision/external/pepbi/inference/observation_to_inference_mapping.csv",
+  "pair_manifest": "revision/external/pepbi/inference/unique_pair_manifest.csv",
+  "receptor_msa_requests": "revision/external/pepbi/inference/receptor_msa_requests.csv"
+}

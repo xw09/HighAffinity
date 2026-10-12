@@ -1,0 +1,19 @@
+{
+  "created_at": "2026-10-06T14:30:33.225876+00:00",
+  "split": "test",
+  "experiment": "M0",
+  "method": "arithmetic mean of per-record probabilities and affinity predictions",
+  "classification_threshold": 0.5,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "sources": [
+    "revision/predictions/stage5/M0_seed1/epoch0-valloss0.3735/predictions.csv",
+    "revision/predictions/stage5/M0_seed2/epoch0-valloss0.3917/predictions.csv",
+    "revision/predictions/stage5/M0_seed3/epoch0-valloss0.3620/predictions.csv"
+  ],
+  "records": 2496,
+  "output": "revision/predictions/ensembles/test/M0_ensemble/predictions.csv"
+}

@@ -1,0 +1,31 @@
+{
+  "binder_threshold_uM": 1000.0,
+  "records": 20950,
+  "affinity_records": 5203,
+  "exact_regression_records": 5016,
+  "censored_or_nonnumeric_records": 187,
+  "classification_clean_records": 20846,
+  "excluded_ambiguous_records": 104,
+  "relabeled_records": 3,
+  "label_status_counts": {
+    "synthetic_decoy": 8420,
+    "structure_derived": 7327,
+    "exact_numeric": 5016,
+    "ambiguous_lower_censored": 102,
+    "unambiguous_lower_censored": 78,
+    "approximate_numeric": 3,
+    "unambiguous_upper_censored": 2,
+    "unparsed_or_unknown_affinity": 1,
+    "ambiguous_upper_censored": 1
+  },
+  "negative_type_original_counts": {
+    "synthetic_decoy": 8420,
+    "bsa_structure_negative": 1693,
+    "experimental_negative": 402
+  },
+  "negative_type_clean_counts": {
+    "synthetic_decoy": 8420,
+    "bsa_structure_negative": 1693,
+    "experimental_negative": 295
+  }
+}

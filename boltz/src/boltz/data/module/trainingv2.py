@@ -41,6 +41,7 @@ class DatasetConfig:
     manifest_path: Optional[str] = None
     filters: Optional[list] = None
     split: Optional[str] = None
+    train_split: Optional[str] = None
 
 @dataclass
 class DataConfig:
@@ -454,16 +455,40 @@ class Boltz2InferenceDataModule(pl.LightningDataModule):
             path = Path(data_config.manifest_path)
             manifest: Manifest = Manifest.load(path)
 
-            # 训练/验证划分
+            # Fixed train/validation ID lists.  When train_split is supplied,
+            # records not present in either list are intentionally excluded
+            # (e.g. ambiguous censored labels from the cleaned revision set).
+            val_ids: set[str] = set()
+            train_ids: Optional[set[str]] = None
             if data_config.split is not None:
                 with Path(data_config.split).open("r") as f:
-                    split = {x.lower() for x in f.read().splitlines()}
-                train_records, val_records = [], []
-                for record in manifest.records:
-                    (val_records if record.id.lower() in split else train_records).append(record)
-            else:
-                train_records = manifest.records
-                val_records = []
+                    val_ids = {x.strip().lower() for x in f if x.strip()}
+            if data_config.train_split is not None:
+                with Path(data_config.train_split).open("r") as f:
+                    train_ids = {x.strip().lower() for x in f if x.strip()}
+                overlap = train_ids & val_ids
+                if overlap:
+                    raise ValueError(
+                        f"Train/validation ID files overlap for {len(overlap)} records."
+                    )
+
+            manifest_ids = {record.id.lower() for record in manifest.records}
+            requested_ids = val_ids | (train_ids or set())
+            missing_ids = requested_ids - manifest_ids
+            if missing_ids:
+                preview = ", ".join(sorted(missing_ids)[:5])
+                raise ValueError(
+                    f"{len(missing_ids)} requested split IDs are absent from "
+                    f"{path}; examples: {preview}"
+                )
+
+            train_records, val_records = [], []
+            for record in manifest.records:
+                record_id = record.id.lower()
+                if record_id in val_ids:
+                    val_records.append(record)
+                elif train_ids is None or record_id in train_ids:
+                    train_records.append(record)
 
             # 全局 + 数据集级筛选
             if self.cfg.filters:

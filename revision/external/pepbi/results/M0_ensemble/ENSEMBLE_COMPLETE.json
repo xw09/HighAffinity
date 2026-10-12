@@ -1,0 +1,39 @@
+{
+  "summaries": [
+    {
+      "subset": "PEPBI pair-disjoint",
+      "observations": 177,
+      "unique_pairs": 137,
+      "binding_groups": 31,
+      "mae": 0.8146429362539622,
+      "rmse": 0.9994887444815348,
+      "pearson": 0.4453365262738562,
+      "spearman": 0.4664721426567951
+    },
+    {
+      "subset": "PEPBI PDB-disjoint",
+      "observations": 69,
+      "unique_pairs": 35,
+      "binding_groups": 4,
+      "mae": 0.7555197895033264,
+      "rmse": 0.8530852032633307,
+      "pearson": 0.4479477637416984,
+      "spearman": 0.2956477707920389
+    }
+  ],
+  "seed_inputs": [
+    "revision/external/pepbi/results/M0_seed1/unique_predictions.csv",
+    "revision/external/pepbi/results/M0_seed2/unique_predictions.csv",
+    "revision/external/pepbi/results/M0_seed3/unique_predictions.csv"
+  ],
+  "seed_labels": [
+    "M0_seed1",
+    "M0_seed2",
+    "M0_seed3"
+  ],
+  "ensemble": "arithmetic mean of per-pair predictions",
+  "bootstrap_unit": "PEPBI binding_group",
+  "bootstrap_replicates": 2000,
+  "random_seed": 20261006,
+  "table": "revision/tables/final_test/table_s5_external_validation.csv"
+}

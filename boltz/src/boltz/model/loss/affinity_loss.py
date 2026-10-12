@@ -1,85 +1,181 @@
+"""Losses used by the affinity fine-tuning task.
+
+Regression labels are optional.  Missing labels are excluded from both the
+numerator and denominator instead of being replaced by the model prediction.
+"""
+
+from typing import Any, Literal, Optional
+
 import torch
-from torch import nn
+from torch import Tensor
+from torch.nn import functional as F
 
-from boltz.data import const
-from boltz.model.layers.confidence_utils import compute_frame_pred, tm_function
 
-def huber_loss(y, y_true, delta=0.5):
-    """计算 Huber 损失"""
-    # 计算误差\
-    y_true_confirmed = torch.where(torch.isnan(y_true), y, y_true)
-    error = y - y_true_confirmed
-    # 判断误差的绝对值是否小于 δ
-    is_small_error = torch.abs(error) <= delta
-    # 使用 Huber 损失公式
-    loss = torch.where(is_small_error, 0.5 * error**2, delta * (torch.abs(error) - 0.5 * delta))
-    return loss.mean(), y_true
+def _zero_loss(reference: Tensor) -> Tensor:
+    """Return a differentiable zero on the same device as ``reference``."""
+    return reference.sum() * 0.0
 
-# Focal Loss的实现
-def focal_loss(prob, targets, gamma=1, alpha=1):
 
-    p_t = targets * prob + (1 - targets) * (1 - prob)
+def _target_tensor(
+    records: list[Any],
+    attribute: str,
+    prediction: Tensor,
+    multiplicity: int = 1,
+) -> Tensor:
+    """Build a target tensor without treating a valid numeric zero as missing."""
+    values: list[float] = []
+    for record in records:
+        affinity = getattr(record, "affinity", None)
+        value = getattr(affinity, attribute, None) if affinity is not None else None
+        values.append(float("nan") if value is None else float(value))
 
-    focal_weight = torch.pow(1 - p_t, gamma)
+    targets = torch.as_tensor(
+        values,
+        device=prediction.device,
+        dtype=prediction.dtype,
+    )
+    if multiplicity > 1:
+        targets = targets.repeat_interleave(multiplicity)
+    if targets.numel() != prediction.numel():
+        raise ValueError(
+            f"Target/prediction size mismatch for {attribute}: "
+            f"{targets.numel()} targets vs {prediction.numel()} predictions."
+        )
+    return targets.reshape_as(prediction)
 
-    # 计算基础交叉熵
-    bce_loss = -targets * torch.log(prob + 1e-8) - (1 - targets) * torch.log(1 - prob + 1e-8)
-    
-    loss = focal_weight * bce_loss
-    
-    # 平衡正负样本 
-    loss = alpha * loss
 
+def huber_loss(y: Tensor, y_true: Tensor, delta: float = 0.5) -> tuple[Tensor, Tensor]:
+    """Masked Huber loss; non-finite targets do not enter the mean."""
+    valid_mask = torch.isfinite(y_true)
+    if not torch.any(valid_mask):
+        return _zero_loss(y), y_true
+    return F.huber_loss(y[valid_mask], y_true[valid_mask], delta=delta), y_true
+
+
+def mse_loss(y: Tensor, y_true: Tensor) -> tuple[Tensor, Tensor]:
+    """Masked mean squared error."""
+    valid_mask = torch.isfinite(y_true)
+    if not torch.any(valid_mask):
+        return _zero_loss(y), y_true
+    return F.mse_loss(y[valid_mask], y_true[valid_mask]), y_true
+
+
+def focal_loss(
+    prob: Tensor,
+    targets: Tensor,
+    gamma: float = 1.0,
+    alpha: Optional[float] = None,
+) -> Tensor:
+    """Binary focal loss on probabilities.
+
+    If supplied, ``alpha`` is the standard positive-class weight and must be in
+    [0, 1]; negative examples receive weight ``1 - alpha``.  ``None`` applies no
+    class weighting.
+    """
+    valid_mask = torch.isfinite(targets)
+    if not torch.any(valid_mask):
+        return _zero_loss(prob)
+
+    # BCE on probabilities is explicitly disallowed under CUDA autocast.
+    # Convert the (possibly ensembled) probability to a float32 logit and use
+    # the autocast-safe logits implementation. This preserves the probability-
+    # ensemble definition while retaining a stable gradient.
+    prob = prob[valid_mask].float().clamp(min=1e-7, max=1.0 - 1e-7)
+    targets = targets[valid_mask].float()
+    logits = torch.logit(prob)
+    p_t = targets * prob + (1.0 - targets) * (1.0 - prob)
+    loss = (1.0 - p_t).pow(gamma) * F.binary_cross_entropy_with_logits(
+        logits, targets, reduction="none"
+    )
+    if alpha is not None:
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("focal_alpha must be between 0 and 1.")
+        alpha_t = targets * alpha + (1.0 - targets) * (1.0 - alpha)
+        loss = alpha_t * loss
     return loss.mean()
 
-def affinity_loss(
-    model_out,
-    feats,
-    multiplicity=1,
-):
-    # TODO no support for MD yet!
-    # TODO only apply to the PDB structures not the distillation ones
-    # breakpoint()
-    affinity_pred_value_loss, rel_affinity_pred_value = huber_loss(
-        model_out["affinity_pred_value"],
-        # feats['record'][0].affinity.true_affinity
-        torch.tensor([[v.affinity.true_affinity] if v.affinity.true_affinity else [torch.nan] for v in feats['record']], dtype=torch.float32).cuda()
+
+def bce_loss(prob: Tensor, targets: Tensor) -> Tensor:
+    """Masked binary cross entropy on probabilities."""
+    valid_mask = torch.isfinite(targets)
+    if not torch.any(valid_mask):
+        return _zero_loss(prob)
+    prob = prob[valid_mask].float().clamp(min=1e-7, max=1.0 - 1e-7)
+    targets = targets[valid_mask].float()
+    return F.binary_cross_entropy_with_logits(
+        torch.logit(prob),
+        targets,
     )
 
-    # 使用 Focal Loss 计算二分类损失
-    rel_affinity_probability_binary = torch.tensor([[v.affinity.true_class] for v in feats['record']], dtype=torch.float32).cuda()  # 真实标签
-    λ_focal = 1.0  # 可以根据需要调整平衡系数，通常用来加重对正样本或负样本的关注。样本不平衡的情况，可以尝试调整 α 或 γ 来优化训练效果。
-    affinity_probability_binary_loss = focal_loss(model_out["affinity_probability_binary"], rel_affinity_probability_binary, gamma=1, alpha=λ_focal)  
 
-    # loss = (
-    #     affinity_pred_value_loss*0.1
-    #     + affinity_value_different_loss*0.9
-    #     + affinity_probability_binary_loss
-    # )
-    loss = (affinity_pred_value_loss + affinity_probability_binary_loss)
-    # print("affinity_pred_value_loss:",affinity_pred_value_loss)
-    # print("affinity_probability_binary_loss:",affinity_probability_binary_loss)
-    # print("loss:",loss)
+def affinity_loss(
+    model_out: dict[str, Tensor],
+    feats: dict[str, Any],
+    multiplicity: int = 1,
+    *,
+    regression_enabled: bool = True,
+    classification_enabled: bool = True,
+    regression_loss: Literal["huber", "mse"] = "huber",
+    classification_loss: Literal["focal", "bce"] = "focal",
+    lambda_reg: float = 1.0,
+    lambda_cls: float = 1.0,
+    huber_delta: float = 0.5,
+    focal_gamma: float = 1.0,
+    focal_alpha: Optional[float] = None,
+) -> dict[str, Any]:
+    """Compute a configurable joint affinity objective.
 
-    # dict_out = {
-    #     "loss": loss,
-    #     "loss_breakdown": {
-    #         "affinity_pred_value_loss": affinity_pred_value_loss,
-    #         "affinity_value_different_loss": affinity_value_different_loss,
-    #         "affinity_probability_binary_loss": affinity_probability_binary_loss,
-    #         "rel_affinity_pred_value": rel_affinity_pred_value,
-    #         "rel_affinity_value_different": rel_affinity_value_different,
-    #         "rel_affinity_probability_binary": rel_affinity_probability_binary,
-    #     },
-    # }
-    dict_out = {
-    "loss": loss,
-    "loss_breakdown": {
-        "affinity_pred_value_loss": affinity_pred_value_loss,
-        "affinity_probability_binary_loss": affinity_probability_binary_loss,
-        "rel_affinity_pred_value": rel_affinity_pred_value,
-        "rel_affinity_probability_binary": rel_affinity_probability_binary,
-    },
+    The total is ``lambda_reg * L_reg + lambda_cls * L_cls``.  Either task can
+    be disabled for the single-task ablations, but at least one must be active.
+    """
+    if not regression_enabled and not classification_enabled:
+        raise ValueError("At least one affinity task must be enabled.")
+    if lambda_reg < 0 or lambda_cls < 0:
+        raise ValueError("Affinity loss weights must be non-negative.")
+
+    records = feats["record"]
+    reg_pred = model_out["affinity_pred_value"]
+    cls_pred = model_out["affinity_probability_binary"]
+    reg_targets = _target_tensor(records, "true_affinity", reg_pred, multiplicity)
+    cls_targets = _target_tensor(records, "true_class", cls_pred, multiplicity)
+
+    reg_valid = torch.isfinite(reg_targets)
+    cls_valid = torch.isfinite(cls_targets)
+
+    if regression_enabled:
+        if regression_loss == "huber":
+            reg_value, _ = huber_loss(reg_pred, reg_targets, delta=huber_delta)
+        elif regression_loss == "mse":
+            reg_value, _ = mse_loss(reg_pred, reg_targets)
+        else:
+            raise ValueError(f"Unsupported regression loss: {regression_loss}")
+    else:
+        reg_value = _zero_loss(reg_pred)
+
+    if classification_enabled:
+        if classification_loss == "focal":
+            cls_value = focal_loss(
+                cls_pred,
+                cls_targets,
+                gamma=focal_gamma,
+                alpha=focal_alpha,
+            )
+        elif classification_loss == "bce":
+            cls_value = bce_loss(cls_pred, cls_targets)
+        else:
+            raise ValueError(f"Unsupported classification loss: {classification_loss}")
+    else:
+        cls_value = _zero_loss(cls_pred)
+
+    total = lambda_reg * reg_value + lambda_cls * cls_value
+    return {
+        "loss": total,
+        "loss_breakdown": {
+            "affinity_pred_value_loss": reg_value,
+            "affinity_probability_binary_loss": cls_value,
+            "rel_affinity_pred_value": reg_targets,
+            "rel_affinity_probability_binary": cls_targets,
+            "regression_valid_count": reg_valid.sum(),
+            "classification_valid_count": cls_valid.sum(),
+        },
     }
-    return dict_out
-

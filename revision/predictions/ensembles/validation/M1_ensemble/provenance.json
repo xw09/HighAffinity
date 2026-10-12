@@ -1,0 +1,19 @@
+{
+  "created_at": "2026-10-06T14:30:33.181057+00:00",
+  "split": "validation",
+  "experiment": "M1",
+  "method": "arithmetic mean of per-record probabilities and affinity predictions",
+  "classification_threshold": 0.5,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "sources": [
+    "revision/predictions/stage6_validation/M1_seed1/epoch1-valloss0.3781/predictions.csv",
+    "revision/predictions/stage6_validation/M1_seed2/epoch3-valloss0.3625/predictions.csv",
+    "revision/predictions/stage6_validation/M1_seed3/epoch1-valloss0.3621/predictions.csv"
+  ],
+  "records": 1836,
+  "output": "revision/predictions/ensembles/validation/M1_ensemble/predictions.csv"
+}

@@ -1,0 +1,8 @@
+Experiment,Trainable parameters,Total parameters,Peak GPU memory (GiB),Best epoch,Wall-clock training time,Inference time per complex,GPU
+M0,"8,741,896","515,055,240",TBD from logs/profiler,TBD auto-fill,TBD from logs,TBD,TBD
+M1,"8,741,896","515,055,240",TBD from logs/profiler,TBD auto-fill,TBD from logs,TBD,TBD
+M2,"8,741,896","515,055,240",TBD from logs/profiler,TBD auto-fill,TBD from logs,TBD,TBD
+M3,"8,741,896","515,055,240",TBD from logs/profiler,TBD auto-fill,TBD from logs,TBD,TBD
+M4,"8,741,896","515,055,240",TBD from logs/profiler,TBD auto-fill,TBD from logs,TBD,TBD
+M5,"8,741,896","515,055,240",TBD from logs/profiler,TBD auto-fill,TBD from logs,TBD,TBD
+M6,"8,741,896","515,055,240",TBD from logs/profiler,TBD auto-fill,TBD from logs,TBD,TBD

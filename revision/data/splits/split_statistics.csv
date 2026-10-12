@@ -1,0 +1,6 @@
+split,records,positive,negative,exact_regression,experimental_negative,bsa_structure_negative,synthetic_decoy,receptor_clusters,peptide_clusters,logAffinity_mean,logAffinity_std
+train,16514,8091,8423,4050,196,1424,6803,1505,7501,0.7388441891777777,1.517389747076218
+validation,1836,904,932,450,18,158,756,168,1362,0.7245859426,1.4985270704318552
+test,2496,1443,1053,516,81,111,861,150,1822,1.047892748255814,1.7109468343738767
+excluded_trainval,79,0,0,0,0,0,0,27,78,,
+excluded_test,25,0,0,0,0,0,0,7,18,,

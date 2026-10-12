@@ -1,0 +1,39 @@
+# Python and editor artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.vscode/
+.idea/
+
+# Local environments and caches
+.venv/
+*.egg-info/
+
+# Large or private revision working files
+revision/runs/
+revision/logs/
+revision/status/
+revision/manuscript/
+revision/originals/*
+!revision/originals/splits/
+!revision/originals/splits/*.csv
+!revision/originals/results/
+revision/originals/results/*
+!revision/originals/results/*.csv
+revision/response/
+revision/analysis/
+revision/configs/stage4/
+revision/predictions/stage5/
+revision/predictions/stage6_validation/
+revision/external/pepbi/boltz/
+revision/external/pepbi/smoke/
+revision/external/pepbi/raw/PEPBI.xlsx
+revision/HighAffinity_revision_figures_*.zip
+
+# Submitted manuscript source and local laboratory material
+论文数据/
+
+# Generated full checkpoints are deliberately excluded. Public affinity-head
+# bundles are stored under revision/checkpoints/affinity_heads instead.
+*.ckpt

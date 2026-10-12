@@ -100,7 +100,13 @@ class MSAModuleArgs:
     num_subsampled_msa: int = 1024
 
 
-def prepare_data(out_dir: str, cache: str, val_ratio: float = 0.2) -> DataConfig:
+def prepare_data(
+    out_dir: str,
+    cache: str,
+    val_ratio: float = 0.2,
+    validation_ids_path: Optional[str] = None,
+    train_ids_path: Optional[str] = None,
+) -> DataConfig:
     """
     读取 out_dir/processed 下的数据，使用 trainingv2.py 的配置类拼装 DataConfig。
     - target_dir -> out_dir / predictions
@@ -115,8 +121,25 @@ def prepare_data(out_dir: str, cache: str, val_ratio: float = 0.2) -> DataConfig
     processed_dir = out_dir / "processed"
     manifest_path = processed_dir / "manifest.json"
 
-    # ⭐ 自动划分验证集（如你已有固定列表，传给 split 即可）
-    split_file = make_val_split_file(manifest_path, out_dir=out_dir, val_ratio=val_ratio, seed=42)
+    if validation_ids_path is not None:
+        split_file = Path(validation_ids_path).expanduser().resolve()
+        if not split_file.is_file():
+            raise FileNotFoundError(f"Validation ID file not found: {split_file}")
+    else:
+        warnings.warn(
+            "No fixed validation ID file was supplied; using the legacy random "
+            "split. Revision experiments should always pass validation_ids_path.",
+            stacklevel=2,
+        )
+        split_file = make_val_split_file(
+            manifest_path, out_dir=out_dir, val_ratio=val_ratio, seed=42
+        )
+
+    train_split_file = None
+    if train_ids_path is not None:
+        train_split_file = Path(train_ids_path).expanduser().resolve()
+        if not train_split_file.is_file():
+            raise FileNotFoundError(f"Training ID file not found: {train_split_file}")
 
     # 注意：DataModule 内部会再次通过 manifest_path 加载 Manifest
     ds_cfg = DatasetConfig(
@@ -133,7 +156,8 @@ def prepare_data(out_dir: str, cache: str, val_ratio: float = 0.2) -> DataConfig
         affinity=True,
         manifest_path=str(manifest_path),
         filters=None,
-        split=str(split_file),   # ⭐ 让 DataModule 构建 val_dataloader
+        split=str(split_file),
+        train_split=(str(train_split_file) if train_split_file else None),
     )
 
     data_cfg = DataConfig(
@@ -188,20 +212,39 @@ def train_affinity_finetune(
     accelerator: str = "gpu",
     accumulate_steps: int = 4,            # 🔧 梯度累积步数（有效 batch = 1×accumulate_steps×devices）
     val_ratio: float = 0.2,            # ⭐ 新增：验证集比例
+    validation_ids_path: Optional[str] = None,
+    train_ids_path: Optional[str] = None,
+    seed: int = 42,
+    base_lr: float = 1e-4,
+    regression_enabled: bool = True,
+    classification_enabled: bool = True,
+    regression_loss: Literal["huber", "mse"] = "huber",
+    classification_loss: Literal["focal", "bce"] = "focal",
+    lambda_reg: float = 1.0,
+    lambda_cls: float = 1.0,
+    huber_delta: float = 0.5,
+    focal_gamma: float = 1.0,
+    focal_alpha: Optional[float] = None,
+    reset_affinity_on_load: bool = False,
+    unfreeze_last_trunk_blocks: int = 0,
+    early_stopping_patience: Optional[int] = None,
+    resume_ckpt_path: Optional[str] = None,
 ):
     # Print header
     click.echo("\nTraining property: affinity\n")
+    seed_everything(seed, workers=True)
+
+    if pretrained_ckpt is None:
+        raise ValueError("pretrained_ckpt is required for controlled fine-tuning.")
+    if not regression_enabled and not classification_enabled:
+        raise ValueError("At least one affinity task must be enabled.")
+    if unfreeze_last_trunk_blocks < 0:
+        raise ValueError("unfreeze_last_trunk_blocks must be non-negative.")
 
     out_dir = Path(out_dir).expanduser()
     cache   = Path(cache).expanduser()
     processed_dir = out_dir / "processed"
     mol_dir = cache / "mols"
-
-    # writer（可选，用于记录预测/评分）（训练阶段不需要写预测产物）
-    pred_writer = BoltzAffinityWriter(
-        data_dir=processed_dir / "structures",
-        output_dir=out_dir / "predictions",
-    )
 
     # Load manifest
     manifest = Manifest.load(out_dir / "processed" / "manifest.json")
@@ -210,7 +253,13 @@ def train_affinity_finetune(
     msg += "s." if len(manifest.records) > 1 else "."
     click.echo(msg)
 
-    data_cfg = prepare_data(out_dir=out_dir, cache=cache, val_ratio=val_ratio)
+    data_cfg = prepare_data(
+        out_dir=out_dir,
+        cache=cache,
+        val_ratio=val_ratio,
+        validation_ids_path=validation_ids_path,
+        train_ids_path=train_ids_path,
+    )
     data_module = Boltz2InferenceDataModule(data_cfg)
     data_module.batchsize = batch_size
     data_module.num_workers = num_workers
@@ -244,6 +293,18 @@ def train_affinity_finetune(
         use_paired_feature=True, 
     )
 
+    loss_args = {
+        "regression_enabled": regression_enabled,
+        "classification_enabled": classification_enabled,
+        "regression_loss": regression_loss,
+        "classification_loss": classification_loss,
+        "lambda_reg": lambda_reg,
+        "lambda_cls": lambda_cls,
+        "huber_delta": huber_delta,
+        "focal_gamma": focal_gamma,
+        "focal_alpha": focal_alpha,
+    }
+
     model_module = Boltz2.load_from_checkpoint(
         affinity_checkpoint,
         # strict=True,
@@ -261,8 +322,14 @@ def train_affinity_finetune(
         # 🔥🔥🔥 核心修改点 🔥🔥🔥
         # affinity_model_args=asdict(affinity_args),  # 传入亲和力网络结构参数
         affinity_prediction=True,                   # 强制告诉模型：我要构建亲和力模块！
+        affinity_loss_args=loss_args,
+        affinity_backbone_grad=(unfreeze_last_trunk_blocks > 0),
+        reset_affinity_on_load=reset_affinity_on_load,
         # 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
     )
+    # reset_affinity_on_load is only for the initial pretrained checkpoint.
+    # A later Trainer resume must restore the learned affinity tensors.
+    model_module.reset_affinity_on_load = False
 
     # --- 补齐校验/训练用的 flag，避免 AttributeError ---
     if not hasattr(model_module, "validate_structure"):
@@ -278,24 +345,75 @@ def train_affinity_finetune(
     for name, param in model_module.named_parameters():
         if "affinity_module" in name:
             param.requires_grad = True
+
+    if unfreeze_last_trunk_blocks:
+        pairformer = model_module.pairformer_module
+        if hasattr(pairformer, "_orig_mod"):
+            pairformer = pairformer._orig_mod
+        layers = pairformer.layers
+        if unfreeze_last_trunk_blocks > len(layers):
+            raise ValueError(
+                f"Requested {unfreeze_last_trunk_blocks} trunk blocks, but the "
+                f"model only has {len(layers)}."
+            )
+        for layer in layers[-unfreeze_last_trunk_blocks:]:
+            layer.requires_grad_(True)
+
+    trainable_names = [
+        name for name, parameter in model_module.named_parameters()
+        if parameter.requires_grad
+    ]
+    trainable_count = sum(
+        parameter.numel() for parameter in model_module.parameters()
+        if parameter.requires_grad
+    )
+    total_count = sum(parameter.numel() for parameter in model_module.parameters())
+    click.echo(
+        f"Trainable parameters: {trainable_count:,}/{total_count:,} "
+        f"({100.0 * trainable_count / total_count:.3f}%), "
+        f"across {len(trainable_names)} tensors."
+    )
+    if unfreeze_last_trunk_blocks:
+        click.echo(
+            f"Partial-trunk ablation enabled: last "
+            f"{unfreeze_last_trunk_blocks} PairFormer blocks are trainable."
+        )
     
     model_module.train()
     
     # === Callbacks & Logger ===
-    logger_tb  = TensorBoardLogger(save_dir=str(ckpt_path), name="lightning_logs")
-    logger_csv = CSVLogger(save_dir=str(ckpt_path), name="lightning_logs_csv") 
+    logger_csv = CSVLogger(save_dir=str(ckpt_path), name="lightning_logs_csv")
+    loggers = [logger_csv]
+    try:
+        logger_tb = TensorBoardLogger(
+            save_dir=str(ckpt_path), name="lightning_logs"
+        )
+    except ModuleNotFoundError:
+        click.echo(
+            "TensorBoard is not installed; continuing with CSV logging only."
+        )
+    else:
+        loggers.insert(0, logger_tb)
 
     ckpt_topk = ModelCheckpoint(
         dirpath=str(Path(ckpt_path) / "checkpoints"),
         save_last=True,
-        # save_top_k=5,                         # 保留 top3
-        save_top_k=-1,                         # 保留所有的检查点
+        save_top_k=1,
         monitor="val/loss_affinity",          # 监控验证集亲和力 loss
         mode="min",                           # 越小越好
         filename="epoch{epoch}-valloss{val/loss_affinity:.4f}",
         auto_insert_metric_name=False,
     )
     lr_cb = LearningRateMonitor(logging_interval="step")
+    callbacks = [ckpt_topk, lr_cb]
+    if early_stopping_patience is not None:
+        callbacks.append(
+            EarlyStopping(
+                monitor="val/loss_affinity",
+                mode="min",
+                patience=early_stopping_patience,
+            )
+        )
 
     # Set up trainer
     trainer = Trainer(
@@ -311,11 +429,10 @@ def train_affinity_finetune(
         limit_val_batches=1.0,        # ⭐ 跑完整验证集
         check_val_every_n_epoch=1,    # ⭐ 每个 epoch 后都验证
         log_every_n_steps=1,             # 🔧 方便观测单步日志
-        callbacks=[ckpt_topk, lr_cb],
-        logger=[logger_tb, logger_csv],
+        callbacks=callbacks,
+        logger=loggers,
+        deterministic=True,
     )
-
-    trainer.callbacks[0] = pred_writer
 
     # 启动预测过程
     # trainer.predict(
@@ -324,9 +441,8 @@ def train_affinity_finetune(
     #     return_predictions=False,
     # )
 
-    # 设置学习率（示例：1e-4）
-    model_module.training_args.base_lr = 1e-4
-    model_module.training_args.max_lr  = 1e-4  # on_load_checkpoint 会用到 max_lr
+    model_module.training_args.base_lr = base_lr
+    model_module.training_args.max_lr = base_lr
 
     # 启动训练过程
     if validation_only:
@@ -338,19 +454,10 @@ def train_affinity_finetune(
         trainer.fit(
             model_module,  # 模型
             datamodule=data_module,  # 数据模块
+            ckpt_path=resume_ckpt_path,
         )
 
 if __name__ == "__main__":
-    train_affinity_finetune(
-        out_dir="/home/fuxin/lab/xw/data/boltz_train_18429", # 结构输出的目录（亲和力输入），并存放亲和力输出
-        ckpt_path="/home/fuxin/lab/xw/boltz/out_train_18429_4_2", # 微调权重存放，训练日志
-        validation_only=False,
-        cache="/home/fuxin/.boltz",
-        max_epochs=20,
-        batch_size=3,
-        # pretrained_ckpt="/home/fuxin/.boltz/boltz2_aff.ckpt",  # or your own pre-trained ckpt
-        pretrained_ckpt="/home/fuxin/lab/xw/boltz/out_train_18429_4/checkpoints/epoch7-valloss0.2632.ckpt",
-        devices=1,
-        precision="bf16-mixed",
-        val_ratio=0.2,   #验证分割
+    raise SystemExit(
+        "Use revision/scripts/run_affinity_training.py --config <config.yaml>."
     )

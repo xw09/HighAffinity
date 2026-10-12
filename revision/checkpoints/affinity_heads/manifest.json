@@ -1,0 +1,90 @@
+[
+  {
+    "run": "M0_seed1",
+    "bundle": "M0_seed1.affinity_head.pt",
+    "source_checkpoint": "epoch0-valloss0.3735.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "99cccac60515d93e2c9350931c8c7b5ae96ee19ab8274164589c0e10b3669cde"
+  },
+  {
+    "run": "M0_seed2",
+    "bundle": "M0_seed2.affinity_head.pt",
+    "source_checkpoint": "epoch0-valloss0.3917.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "5d0b2b4ccd2034131e44146d9c4f1dd4a77889cb6e35a7e43e089ef1211b3d02"
+  },
+  {
+    "run": "M0_seed3",
+    "bundle": "M0_seed3.affinity_head.pt",
+    "source_checkpoint": "epoch0-valloss0.3620.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "a04c854f661bd6df2431ff0ccfd4629d584469af92696f5a000f8a1b3c2353b8"
+  },
+  {
+    "run": "M1_seed1",
+    "bundle": "M1_seed1.affinity_head.pt",
+    "source_checkpoint": "epoch1-valloss0.3781.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "3e5efa0327f10d2798ff0ba1727a82312a644d4544867d59f73f2bd7a74c78d2"
+  },
+  {
+    "run": "M1_seed2",
+    "bundle": "M1_seed2.affinity_head.pt",
+    "source_checkpoint": "epoch3-valloss0.3625.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "b1e64e3621c1ce5cef6cef3784c164d93316013eb3f657a3da5c612fd80f0657"
+  },
+  {
+    "run": "M1_seed3",
+    "bundle": "M1_seed3.affinity_head.pt",
+    "source_checkpoint": "epoch1-valloss0.3621.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "daa8da96234737574eed4c9e77137b6b87228e2e737a5efd40487feb00524bc7"
+  },
+  {
+    "run": "M2_seed1",
+    "bundle": "M2_seed1.affinity_head.pt",
+    "source_checkpoint": "epoch7-valloss0.3714.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "9a518eae9daf1942f3129fee6651e674d23b5c729d34219f283e73413dff591d"
+  },
+  {
+    "run": "M3_seed1",
+    "bundle": "M3_seed1.affinity_head.pt",
+    "source_checkpoint": "epoch0-valloss0.2427.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "885f9525d13181d1d14576b835774eb2cfde571fb6fe1cd6ce97414296f3054d"
+  },
+  {
+    "run": "M4_seed1",
+    "bundle": "M4_seed1.affinity_head.pt",
+    "source_checkpoint": "epoch2-valloss0.8755.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "f3e0b6b9044a189dd452dada9b1284ffc89ef25849136d9cdb5ca61d2dc06b1d"
+  },
+  {
+    "run": "M5_seed1",
+    "bundle": "M5_seed1.affinity_head.pt",
+    "source_checkpoint": "epoch1-valloss0.6136.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "0a281e918242198d8e865ee0f663dbcde828cdca9bfd01f1b966082c34ff88cb"
+  },
+  {
+    "run": "M6_seed1",
+    "bundle": "M6_seed1.affinity_head.pt",
+    "source_checkpoint": "epoch4-valloss0.5499.ckpt",
+    "tensor_count": 520,
+    "size_bytes": 35155201,
+    "sha256": "64f96c64a598504ef3cbbe4b4148bee3aed089fe0abc811e2519e8812d2a6b18"
+  }
+]

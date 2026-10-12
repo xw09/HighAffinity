@@ -1,0 +1,7 @@
+{
+  "protocol": "Boltz2 single-sequence mode for every protein and peptide chain",
+  "reason": "No local MMseqs2 sequence database was available, and PEPBI sequences were not submitted to an external MSA service.",
+  "yaml_inputs": 137,
+  "protein_chains_set_to_empty_msa": 274,
+  "limitation": "The external inference MSA condition differs from the precomputed internal benchmark structures and can reduce structure accuracy."
+}

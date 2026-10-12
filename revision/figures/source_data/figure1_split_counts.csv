@@ -1,0 +1,4 @@
+split,classification,regression,receptor_groups
+train,16514,4050,1503
+validation,1836,450,167
+test,2496,516,150

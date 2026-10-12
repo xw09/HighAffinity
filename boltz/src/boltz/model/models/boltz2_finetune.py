@@ -108,6 +108,9 @@ class Boltz2(LightningModule):
         checkpoint_diffusion_conditioning: bool = False,
         use_templates_v2: bool = False,
         use_kernels: bool = False,
+        affinity_loss_args: Optional[dict[str, Any]] = None,
+        affinity_backbone_grad: bool = False,
+        reset_affinity_on_load: bool = False,
     ) -> None:
         super().__init__()
         self.save_hyperparameters(ignore=["validators"])
@@ -139,6 +142,20 @@ class Boltz2(LightningModule):
         self.diffusion_loss_args = diffusion_loss_args
         self.predict_args = predict_args
         self.steering_args = steering_args
+        self.affinity_loss_args = {
+            "regression_enabled": True,
+            "classification_enabled": True,
+            "regression_loss": "huber",
+            "classification_loss": "focal",
+            "lambda_reg": 1.0,
+            "lambda_cls": 1.0,
+            "huber_delta": 0.5,
+            "focal_gamma": 1.0,
+            "focal_alpha": None,
+            **dict(affinity_loss_args or {}),
+        }
+        self.affinity_backbone_grad = affinity_backbone_grad
+        self.reset_affinity_on_load = reset_affinity_on_load
 
         # Training metrics
         if validate_structure:
@@ -423,7 +440,8 @@ class Boltz2(LightningModule):
         run_confidence_sequentially: bool = False,
     ) -> dict[str, Tensor]:
         with torch.set_grad_enabled(
-            self.training and self.structure_prediction_training
+            self.training
+            and (self.structure_prediction_training or self.affinity_backbone_grad)
         ):
             "feats.keys:dict_keys(['token_index', 'residue_index', 'asym_id', 'entity_id', 'sym_id', 'mol_type', 'res_type', 'disto_center', 'token_bonds', 'type_bonds',"
             "'token_pad_mask', 'token_resolved_mask', 'token_disto_mask', 'contact_conditioning', 'contact_threshold', 'method_feature', 'modified', 'cyclic_period', "
@@ -464,7 +482,10 @@ class Boltz2(LightningModule):
                 for i in range(recycling_steps + 1):
                     with torch.set_grad_enabled(
                         self.training
-                        and self.structure_prediction_training
+                        and (
+                            self.structure_prediction_training
+                            or self.affinity_backbone_grad
+                        )
                         and (i == recycling_steps)
                     ):
                         # Issue with unused parameters in autocast
@@ -699,12 +720,18 @@ class Boltz2(LightningModule):
             #⭐ ---------- 构造坐标：优先用结构采样，否则回退到输入 coords ----------
 
             s_inputs = self.input_embedder(feats, affinity=True)
+            affinity_s_inputs = (
+                s_inputs if self.affinity_backbone_grad else s_inputs.detach()
+            )
+            affinity_z = (
+                z_affinity if self.affinity_backbone_grad else z_affinity.detach()
+            )
 
             with torch.autocast("cuda", enabled=False):
                 if self.affinity_ensemble:
                     dict_out_affinity1 = self.affinity_module1(
-                        s_inputs=s_inputs.detach(),
-                        z=z_affinity.detach(),
+                        s_inputs=affinity_s_inputs,
+                        z=affinity_z,
                         x_pred=coords_affinity,
                         feats=feats,
                         multiplicity=1,
@@ -717,8 +744,8 @@ class Boltz2(LightningModule):
                         )
                     )
                     dict_out_affinity2 = self.affinity_module2(
-                        s_inputs=s_inputs.detach(),
-                        z=z_affinity.detach(),
+                        s_inputs=affinity_s_inputs,
+                        z=affinity_z,
                         x_pred=coords_affinity,
                         feats=feats,
                         multiplicity=1,
@@ -777,8 +804,8 @@ class Boltz2(LightningModule):
                     dict_out.update(dict_out_affinity2)
                 else:
                     dict_out_affinity = self.affinity_module(
-                        s_inputs=s_inputs.detach(),
-                        z=z_affinity.detach(),
+                        s_inputs=affinity_s_inputs,
+                        z=affinity_z,
                         x_pred=coords_affinity,
                         feats=feats,
                         multiplicity=1,
@@ -1033,9 +1060,26 @@ class Boltz2(LightningModule):
         # print("out", out.keys())
         # print("batch", batch)
         # 计算 AffinityModule 模块的损失
-        affinity_loss_dict = affinity_loss(out, batch, multiplicity=1)
+        affinity_loss_dict = affinity_loss(
+            out,
+            batch,
+            multiplicity=1,
+            **self.affinity_loss_args,
+        )
         loss = affinity_loss_dict["loss"]
-        self.log("train/loss_affinity", loss)
+        breakdown = affinity_loss_dict["loss_breakdown"]
+        batch_size = batch["token_index"].shape[0]
+        self.log("train/loss_affinity", loss, batch_size=batch_size)
+        self.log(
+            "train/loss_regression",
+            breakdown["affinity_pred_value_loss"],
+            batch_size=batch_size,
+        )
+        self.log(
+            "train/loss_classification",
+            breakdown["affinity_probability_binary_loss"],
+            batch_size=batch_size,
+        )
         self.training_log()
 
         return loss
@@ -1197,12 +1241,20 @@ class Boltz2(LightningModule):
         )
 
         # 计算亲和力验证损失（与训练使用同一个函数）
-        affinity_loss_dict = affinity_loss(out, batch, multiplicity=1)
+        affinity_loss_dict = affinity_loss(
+            out,
+            batch,
+            multiplicity=1,
+            **self.affinity_loss_args,
+        )
         val_loss = affinity_loss_dict["loss"]
+        breakdown = affinity_loss_dict["loss_breakdown"]
 
         # 记录：只在 epoch 级聚合，进度条显示
         B = batch["token_index"].shape[0]
         self.log("val/loss_affinity", val_loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True, batch_size=B)
+        self.log("val/loss_regression", breakdown["affinity_pred_value_loss"], on_step=False, on_epoch=True, sync_dist=True, batch_size=B)
+        self.log("val/loss_classification", breakdown["affinity_probability_binary_loss"], on_step=False, on_epoch=True, sync_dist=True, batch_size=B)
 
         return val_loss 
 
@@ -1375,20 +1427,14 @@ class Boltz2(LightningModule):
     "冻结其他模块的权重，只训练亲和力预测部分"
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        # 获取所有的参数名
-        param_dict = dict(self.named_parameters())
-
-        # 支持三种命名：affinity_module（单头）/ affinity_module1 / affinity_module2（双头）
-        allow_prefixes = ("affinity_module", "affinity_module1", "affinity_module2")
-
-        params = [
-            p for n, p in param_dict.items()
-            if p.requires_grad and n.split(".")[0] in allow_prefixes
-        ]
-        assert len(params) > 0, "Optimizer 中没有亲和力头参数，请检查 requires_grad 与命名"
+        # The training entry point explicitly selects trainable modules.  Using
+        # all requires_grad parameters here is essential for the partial-trunk
+        # ablation; prefix filtering would silently omit the unfrozen blocks.
+        params = [p for p in self.parameters() if p.requires_grad]
+        assert len(params) > 0, "Optimizer 中没有可训练参数，请检查 requires_grad 配置"
 
         optimizer = torch.optim.AdamW(
-            params,  # 只传入 affinity 模块的参数
+            params,
             lr=self.training_args.base_lr,
             betas=(self.training_args.adam_beta_1, self.training_args.adam_beta_2),
             eps=self.training_args.adam_eps,
@@ -1425,19 +1471,15 @@ class Boltz2(LightningModule):
                 "weight_decay"
             ] = self.training_args.weight_decay
 
-        # # ======================= 👇 新增代码开始 👇 =======================
-        # # 强制剔除 checkpoint 中的亲和力模块权重，确保从头开始训练（随机初始化）
-        # state_dict = checkpoint.get("state_dict", checkpoint) # 兼容不同格式
-        
-        # # 找出所有包含 "affinity_module" 的键（涵盖单头 affinity_module 和双头 affinity_module1/2）
-        # keys_to_remove = [k for k in state_dict.keys() if "affinity_module" in k]
-        
-        # if len(keys_to_remove) > 0:
-        #     print(f"[Boltz2] ⚠️ Detected {len(keys_to_remove)} affinity weights in checkpoint.")
-        #     print("[Boltz2] 🗑️ Removing them to train Affinity Module FROM SCRATCH.")
-        #     for k in keys_to_remove:
-        #         del state_dict[k]
-        # # ======================= 👆 新增代码结束 👆 =======================
+        if self.reset_affinity_on_load:
+            state_dict = checkpoint.get("state_dict", checkpoint)
+            keys_to_remove = [k for k in state_dict if "affinity_module" in k]
+            for key in keys_to_remove:
+                del state_dict[key]
+            print(
+                "[Boltz2] Random-head ablation: ignored "
+                f"{len(keys_to_remove)} pretrained affinity tensors."
+            )
 
     def configure_callbacks(self) -> list[Callback]:
         """Configure model callbacks.

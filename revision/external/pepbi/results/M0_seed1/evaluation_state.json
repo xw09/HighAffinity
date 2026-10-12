@@ -1,0 +1,7 @@
+{
+  "checkpoint": "revision/runs/M0_seed1/checkpoints/epoch0-valloss0.3735.ckpt",
+  "boltz_dir": "revision/external/pepbi/boltz/boltz_results_inputs",
+  "expected_unique_pairs": 137,
+  "pending_before_run": 137,
+  "started_at": "2026-10-06T15:20:58.943038+00:00"
+}

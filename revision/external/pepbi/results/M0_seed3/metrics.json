@@ -1,0 +1,22 @@
+{
+  "checkpoint": "revision/runs/M0_seed3/checkpoints/epoch0-valloss0.3620.ckpt",
+  "boltz_dir": "revision/external/pepbi/boltz/boltz_results_inputs",
+  "expected_unique_pairs": 137,
+  "pending_before_run": 137,
+  "started_at": "2026-10-06T15:31:10.309621+00:00",
+  "completed_at": "2026-10-06T15:35:50.308485+00:00",
+  "observation_level": {
+    "n": 177,
+    "mae": 0.8199347162646268,
+    "rmse": 1.018271647917914,
+    "pearson": 0.4034579091565354,
+    "spearman": 0.4459556485598976
+  },
+  "unique_pair_level": {
+    "n": 137,
+    "mae": 0.7403913261015355,
+    "rmse": 0.9954970694065066,
+    "pearson": 0.4057062118145804,
+    "spearman": 0.4889705624991435
+  }
+}

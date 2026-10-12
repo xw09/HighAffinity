@@ -1,0 +1,4 @@
+Dataset split,Records,Classification eligible,Positive,Negative,Exact regression labels,Experimental negatives,BSA/structure negatives,Synthetic decoys,Receptor clusters,Peptide clusters
+train,16514,16514,8091,8423,4050,196,1424,6803,1505,7501
+validation,1836,1836,904,932,450,18,158,756,168,1362
+test,2496,2496,1443,1053,516,81,111,861,150,1822

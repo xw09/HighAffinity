@@ -1,0 +1,17 @@
+{
+  "seed_inputs": [
+    "revision/external/pepbi/results/M0_seed1/unique_predictions.csv",
+    "revision/external/pepbi/results/M0_seed2/unique_predictions.csv",
+    "revision/external/pepbi/results/M0_seed3/unique_predictions.csv"
+  ],
+  "seed_labels": [
+    "M0_seed1",
+    "M0_seed2",
+    "M0_seed3"
+  ],
+  "ensemble": "arithmetic mean of per-pair predictions",
+  "bootstrap_unit": "PEPBI binding_group",
+  "bootstrap_replicates": 2000,
+  "random_seed": 20261006,
+  "table": "revision/tables/final_test/table_s5_external_validation.csv"
+}

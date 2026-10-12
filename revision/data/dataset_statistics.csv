@@ -1,0 +1,4 @@
+split,records,affinity_records,exact_regression_records,nonnumeric_or_censored_affinity_records,classification_original_records,classification_clean_records,positive_original,negative_original,positive_clean,negative_clean,excluded_ambiguous,relabeled,receptor_clusters,peptide_clusters
+trainval,18429,4644,4500,144,18429,18350,8992,9437,8995,9355,79,3,1673,8074
+test,2521,559,516,43,2521,2496,1443,1078,1443,1053,25,0,150,1835
+overall,20950,5203,5016,187,20950,20846,10435,10515,10438,10408,104,3,1823,8598

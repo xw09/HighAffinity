@@ -1,0 +1,7 @@
+External cohort,Model,N thermodynamic observations,Interpretation,MAE,MAE 95% CI,RMSE,RMSE 95% CI,Pearson r,Pearson 95% CI,Spearman rho,Spearman 95% CI
+PEPBI strict receptor-cold non-overlap,HighAffinity (M0 seed ensemble),0,Unavailable as an evaluation cohort when N=0,TBD,TBD,TBD,TBD,TBD,TBD,TBD,TBD
+PEPBI strict receptor-cold non-overlap,PEPBI Rosetta RIA dG baseline,0,Unavailable as an evaluation cohort when N=0,TBD,TBD,TBD,TBD,TBD,TBD,TBD,TBD
+PEPBI exact sequence-pair-disjoint,HighAffinity (M0 seed ensemble),177,Sensitivity analysis; receptor overlap remains,TBD,TBD,TBD,TBD,TBD,TBD,TBD,TBD
+PEPBI exact sequence-pair-disjoint,PEPBI Rosetta RIA dG baseline,177,Sensitivity analysis; receptor overlap remains,TBD,TBD,TBD,TBD,TBD,TBD,TBD,TBD
+PEPBI PDB-ID-disjoint,HighAffinity (M0 seed ensemble),69,Sensitivity analysis; receptor overlap remains,TBD,TBD,TBD,TBD,TBD,TBD,TBD,TBD
+PEPBI PDB-ID-disjoint,PEPBI Rosetta RIA dG baseline,69,Sensitivity analysis; receptor overlap remains,TBD,TBD,TBD,TBD,TBD,TBD,TBD,TBD

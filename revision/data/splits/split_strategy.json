@@ -1,0 +1,50 @@
+{
+  "input_manifest": "revision/data/final_manifest_v2.csv",
+  "validation_fraction": 0.1,
+  "group_field": "receptor_group",
+  "group_definition": "connected components of prot_cluster values linked by an identical Protein_Sequence",
+  "nominal_trainval_receptor_clusters": 1673,
+  "effective_trainval_receptor_groups": 1670,
+  "nominal_clusters_merged_by_exact_sequence": 3,
+  "regression_quantiles": 5,
+  "regression_quantile_edges": [
+    -6.82391,
+    -0.481486,
+    0.570543,
+    1.2864560000000014,
+    2.0,
+    5.69723
+  ],
+  "uses_model_predictions": false,
+  "uses_test_records_for_validation_selection": false,
+  "optimization": {
+    "solver_success": true,
+    "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+    "objective_value": 0.16666679311166666,
+    "candidate_receptor_groups": 1670,
+    "selected_validation_groups": 167,
+    "target_validation_groups": 167,
+    "stratum_targets": {
+      "bsa_structure_negative": 158,
+      "nonreg_experimental_negative": 6,
+      "nonreg_positive": 465,
+      "reg_q1": 90,
+      "reg_q2": 90,
+      "reg_q3": 90,
+      "reg_q4": 91,
+      "reg_q5": 89,
+      "synthetic_decoy": 756
+    },
+    "stratum_actual": {
+      "bsa_structure_negative": 158,
+      "nonreg_experimental_negative": 7,
+      "nonreg_positive": 465,
+      "reg_q1": 90,
+      "reg_q2": 90,
+      "reg_q3": 90,
+      "reg_q4": 91,
+      "reg_q5": 89,
+      "synthetic_decoy": 756
+    }
+  }
+}

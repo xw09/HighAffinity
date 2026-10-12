@@ -108,6 +108,9 @@ class Boltz2(LightningModule):
         checkpoint_diffusion_conditioning: bool = False,
         use_templates_v2: bool = False,
         use_kernels: bool = False,
+        affinity_loss_args: Optional[dict[str, Any]] = None,
+        affinity_backbone_grad: bool = False,
+        reset_affinity_on_load: bool = False,
     ) -> None:
         super().__init__()
         self.save_hyperparameters(ignore=["validators"])

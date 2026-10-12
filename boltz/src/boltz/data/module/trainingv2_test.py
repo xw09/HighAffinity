@@ -41,6 +41,7 @@ class DatasetConfig:
     manifest_path: Optional[str] = None
     filters: Optional[list] = None
     split: Optional[str] = None
+    ids_path: Optional[str] = None
 
 @dataclass
 class DataConfig:
@@ -371,6 +372,26 @@ class Boltz2InferenceDataModule(pl.LightningDataModule):
             # 载入 manifest
             path = Path(data_config.manifest_path)
             manifest: Manifest = Manifest.load(path)
+            if data_config.ids_path is not None:
+                with Path(data_config.ids_path).open("r") as handle:
+                    requested_ids = {
+                        line.strip().lower() for line in handle if line.strip()
+                    }
+                manifest_ids = {record.id.lower() for record in manifest.records}
+                missing_ids = requested_ids - manifest_ids
+                if missing_ids:
+                    preview = ", ".join(sorted(missing_ids)[:5])
+                    raise ValueError(
+                        f"{len(missing_ids)} prediction IDs are absent from "
+                        f"{path}; examples: {preview}"
+                    )
+                manifest = Manifest(
+                    [
+                        record
+                        for record in manifest.records
+                        if record.id.lower() in requested_ids
+                    ]
+                )
 
             vset = ValDataset(
                     manifest=manifest,
